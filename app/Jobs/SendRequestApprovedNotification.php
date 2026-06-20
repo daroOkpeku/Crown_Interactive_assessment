@@ -38,15 +38,13 @@ class SendRequestApprovedNotification implements ShouldQueue
             return;
         }
 
-        // Notify the request submitter
+     
         Log::info("Approval notification sent to requester {$request->user->email} for request {$request->title}");
         
-        // If fully approved, send final approval notification
         if ($request->status === 'approved') {
             Log::info("Final approval notification sent for request {$request->title}");
             // Mail::to($request->user->email)->send(new RequestFullyApprovedNotification($request));
         } else {
-            // Send notification to next level approvers
             $nextLevelApprovals = \App\Models\RequestApproval::where('request_id', $this->requestId)
                 ->where('status', 'pending')
                 ->with('approver')

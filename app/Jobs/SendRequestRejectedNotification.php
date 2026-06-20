@@ -38,7 +38,6 @@ class SendRequestRejectedNotification implements ShouldQueue
             return;
         }
 
-        // Notify the request submitter about rejection
         Log::info("Rejection notification sent to requester {$request->user->email} for request {$request->title}. Reason: {$this->rejectionReason}");
         
         // Mail::to($request->user->email)->send(new RequestRejectedNotification($request, $this->rejectionReason));
