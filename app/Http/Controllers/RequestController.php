@@ -10,6 +10,7 @@ use App\Http\Requests\StoreApprovalRequest;
 use App\Http\Requests\UpdateApprovalRequest;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class RequestController extends Controller
@@ -86,6 +87,7 @@ class RequestController extends Controller
 
             DB::commit();
 
+            Cache::forget('request_stats_' . $user->id);
             dispatch(new SendRequestSubmittedNotification($request->id));
 
             return apiResponse(201, 'Request submitted successfully', $request->load(['user', 'department', 'approvals']));
@@ -128,19 +130,22 @@ class RequestController extends Controller
     public function statistics()
     {
         $user = Auth::user();
+        $cacheKey = 'request_stats_' . $user->id;
         
-        $query = Request::query();
-        
-        if (!$user->hasRole('superadmin') && !$user->hasRole('sub_unit_head')) {
-            $query->where('user_id', $user->id);
-        }
-        
-        $stats = [
-            'total' => $query->count(),
-            'pending' => (clone $query)->where('status', 'pending')->count(),
-            'approved' => (clone $query)->where('status', 'approved')->count(),
-            'rejected' => (clone $query)->where('status', 'rejected')->count(),
-        ];
+        $stats = Cache::remember($cacheKey, 300, function () use ($user) {
+            $query = Request::query();
+            
+            if (!$user->hasRole('superadmin') && !$user->hasRole('sub_unit_head')) {
+                $query->where('user_id', $user->id);
+            }
+            
+            return [
+                'total' => $query->count(),
+                'pending' => (clone $query)->where('status', 'pending')->count(),
+                'approved' => (clone $query)->where('status', 'approved')->count(),
+                'rejected' => (clone $query)->where('status', 'rejected')->count(),
+            ];
+        });
 
         return apiResponse(200, 'Statistics retrieved successfully', $stats);
     }

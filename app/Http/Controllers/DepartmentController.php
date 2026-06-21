@@ -16,7 +16,9 @@ class DepartmentController extends Controller
 {
     public function index()
     {
-        $departments = Department::paginate(10);
+        $departments = Cache::remember('departments_all', 3600, function () {
+            return Department::paginate(10);
+        });
         return DepartmentResource::collection($departments)->additional(['success' => true]);
     }
 
@@ -44,6 +46,8 @@ class DepartmentController extends Controller
             "department_management",
             auth()->user()->id,
         );
+        
+        Cache::forget('departments_all');
         $data = new DepartmentResource($department);
         return apiResponse(201, 'Department created successfully', $data);
     }
@@ -69,6 +73,7 @@ class DepartmentController extends Controller
             auth()->user()->id,
         );
 
+        Cache::forget('departments_all');
         $data = new DepartmentResource($department);
         return apiResponse(200, 'Department updated successfully', $data);
     }
@@ -86,6 +91,8 @@ class DepartmentController extends Controller
         );
 
         $department->delete();
+        
+        Cache::forget('departments_all');
         return apiResponse(200, 'Department deleted successfully', []);
     }
 

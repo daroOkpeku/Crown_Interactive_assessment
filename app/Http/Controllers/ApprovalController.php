@@ -7,8 +7,10 @@ use App\Models\RequestApproval;
 use App\Models\ApprovalLevel;
 use App\Http\Requests\ApproveRequest;
 use App\Http\Requests\RejectRequest;
+use App\Http\Requests\UpdateApprovalRequest;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ApprovalController extends Controller
@@ -78,13 +80,10 @@ class ApprovalController extends Controller
 
             DB::commit();
 
+            Cache::forget('request_stats_' . $request->user_id);
             dispatch(new ProcessApprovalWorkflow($request->id, $requestApproval->approval_level_id));
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Request approved successfully',
-                'data' => $request->load(['approvals'])
-            ]);
+            return apiResponse(200, 'Request approved successfully', $request->load(['approvals']));
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -128,6 +127,7 @@ class ApprovalController extends Controller
 
             DB::commit();
 
+            Cache::forget('request_stats_' . $request->user_id);
             dispatch(new SendRequestRejectedNotification($request->id, $httpRequest->comments));
 
             return apiResponse(200, 'Request rejected successfully', $request->load(['approvals']));

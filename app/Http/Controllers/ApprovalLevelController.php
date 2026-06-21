@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateApprovalLevelRequest;
 use App\Http\Requests\AssignApproversRequest;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ApprovalLevelController extends Controller
@@ -16,18 +17,21 @@ class ApprovalLevelController extends Controller
     public function index(HttpRequest $httpRequest)
     {
         $user = Auth::user();
+        $cacheKey = 'approval_levels_' . ($httpRequest->department_id ?? 'all') . '_' . $user->id;
         
-        $query = ApprovalLevel::with(['approvers.user', 'department']);
-        
-        if ($httpRequest->has('department_id')) {
-            $query->where('department_id', $httpRequest->department_id);
-        }
-        
-        if (!$user->hasRole('superadmin') && $user->department_id) {
-            $query->where('department_id', $user->department_id);
-        }
-        
-        $approvalLevels = $query->orderBy('level', 'asc')->get();
+        $approvalLevels = Cache::remember($cacheKey, 3600, function () use ($httpRequest, $user) {
+            $query = ApprovalLevel::with(['approvers.user', 'department']);
+            
+            if ($httpRequest->has('department_id')) {
+                $query->where('department_id', $httpRequest->department_id);
+            }
+            
+            if (!$user->hasRole('superadmin') && $user->department_id) {
+                $query->where('department_id', $user->department_id);
+            }
+            
+            return $query->orderBy('level', 'asc')->get();
+        });
         
         return apiResponse(200, 'Approval levels retrieved successfully', $approvalLevels);
     }
@@ -52,15 +56,20 @@ class ApprovalLevelController extends Controller
             'is_active' => true,
         ]);
 
+        Cache::forget('approval_levels_' . $validator['department_id'] . '_*');
+        Cache::forget('approval_level_' . $approvalLevel->id);
+
         return apiResponse(201, 'Approval level created successfully', $approvalLevel);
     }
 
     public function show($id)
     {
         $user = Auth::user();
+        $cacheKey = 'approval_level_' . $id;
         
-        $approvalLevel = ApprovalLevel::with(['approvers.user', 'department'])
-            ->findOrFail($id);
+        $approvalLevel = Cache::remember($cacheKey, 3600, function () use ($id) {
+            return ApprovalLevel::with(['approvers.user', 'department'])->findOrFail($id);
+        });
 
         if (!$user->hasRole('superadmin') && 
             !$user->hasRole('sub_unit_head') &&
@@ -80,6 +89,9 @@ class ApprovalLevelController extends Controller
             'description' => $validator['description'] ?? $approvalLevel->description,
             'is_active' => $validator['is_active'] ?? $approvalLevel->is_active,
         ]);
+
+        Cache::forget('approval_levels_' . $approvalLevel->department_id . '_*');
+        Cache::forget('approval_level_' . $id);
 
         return apiResponse(200, 'Approval level updated successfully', $approvalLevel);
     }
@@ -127,6 +139,9 @@ class ApprovalLevelController extends Controller
 
             DB::commit();
 
+            Cache::forget('approval_levels_' . $approvalLevel->department_id . '_*');
+            Cache::forget('approval_level_' . $id);
+
             return apiResponse(200, 'Approvers assigned successfully', $approvalLevel->load('approvers.user'));
 
         } catch (\Exception $e) {
@@ -148,6 +163,9 @@ class ApprovalLevelController extends Controller
         Approver::where('approval_level_id', $approvalLevelId)
             ->where('user_id', $userId)
             ->delete();
+
+        Cache::forget('approval_levels_' . $approvalLevel->department_id . '_*');
+        Cache::forget('approval_level_' . $approvalLevelId);
 
         return apiResponse(200, 'Approver removed successfully');
     }
