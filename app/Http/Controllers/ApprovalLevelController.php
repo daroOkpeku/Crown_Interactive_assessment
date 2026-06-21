@@ -16,14 +16,17 @@ class ApprovalLevelController extends Controller
 {
     public function index(HttpRequest $httpRequest)
     {
+        $validate = $httpRequest->validate([
+            'department_id' => 'nullable|integer|exists:departments,id',
+        ]);
         $user = Auth::user();
-        $cacheKey = 'approval_levels_' . ($httpRequest->department_id ?? 'all') . '_' . $user->id;
+        $cacheKey = 'approval_levels_' . ($validate['department_id'] ?? 'all') . '_' . $user->id;
         
-        $approvalLevels = Cache::remember($cacheKey, 3600, function () use ($httpRequest, $user) {
+        $approvalLevels = Cache::remember($cacheKey, 3600, function () use ($validate, $user) {
             $query = ApprovalLevel::with(['approvers.user', 'department']);
             
-            if ($httpRequest->has('department_id')) {
-                $query->where('department_id', $httpRequest->department_id);
+            if ($validate['department_id']) {
+                $query->where('department_id', $validate['department_id']);
             }
             
             if (!$user->hasRole('superadmin') && $user->department_id) {
@@ -48,6 +51,8 @@ class ApprovalLevelController extends Controller
             return apiResponseError('Approval level already exists for this department', 422);
         }
 
+
+
         $approvalLevel = ApprovalLevel::create([
             'department_id' => $validator['department_id'],
             'level' => $validator['level'],
@@ -67,7 +72,7 @@ class ApprovalLevelController extends Controller
         $user = Auth::user();
         $cacheKey = 'approval_level_' . $id;
         
-        $approvalLevel = Cache::remember($cacheKey, 3600, function () use ($id) {
+        $approvalLevel = Cache::remember($cacheKey, 3600, function () use ($id  ) {
             return ApprovalLevel::with(['approvers.user', 'department'])->findOrFail($id);
         });
 
