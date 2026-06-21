@@ -29,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        ApprovalLevel::observe(ApprovalLevelObserver::class);
+        ApprovalRequest::observe(ApprovalRequestObserver::class);
+        Department::observe(DepartmentObserver::class);
+        Approver::observe(ApproverObserver::class);
     }
 }

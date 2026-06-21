@@ -87,7 +87,6 @@ class RequestController extends Controller
 
             DB::commit();
 
-            Cache::forget('request_stats_' . $user->id);
             dispatch(new SendRequestSubmittedNotification($request->id));
 
             return apiResponse(201, 'Request submitted successfully', $request->load(['user', 'department', 'approvals']));

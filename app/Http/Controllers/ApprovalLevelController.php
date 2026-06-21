@@ -61,9 +61,6 @@ class ApprovalLevelController extends Controller
             'is_active' => true,
         ]);
 
-        Cache::forget('approval_levels_' . $validator['department_id'] . '_*');
-        Cache::forget('approval_level_' . $approvalLevel->id);
-
         return apiResponse(201, 'Approval level created successfully', $approvalLevel);
     }
 
@@ -94,9 +91,6 @@ class ApprovalLevelController extends Controller
             'description' => $validator['description'] ?? $approvalLevel->description,
             'is_active' => $validator['is_active'] ?? $approvalLevel->is_active,
         ]);
-
-        Cache::forget('approval_levels_' . $approvalLevel->department_id . '_*');
-        Cache::forget('approval_level_' . $id);
 
         return apiResponse(200, 'Approval level updated successfully', $approvalLevel);
     }
@@ -144,9 +138,6 @@ class ApprovalLevelController extends Controller
 
             DB::commit();
 
-            Cache::forget('approval_levels_' . $approvalLevel->department_id . '_*');
-            Cache::forget('approval_level_' . $id);
-
             return apiResponse(200, 'Approvers assigned successfully', $approvalLevel->load('approvers.user'));
 
         } catch (\Exception $e) {
@@ -168,9 +159,6 @@ class ApprovalLevelController extends Controller
         Approver::where('approval_level_id', $approvalLevelId)
             ->where('user_id', $userId)
             ->delete();
-
-        Cache::forget('approval_levels_' . $approvalLevel->department_id . '_*');
-        Cache::forget('approval_level_' . $approvalLevelId);
 
         return apiResponse(200, 'Approver removed successfully');
     }

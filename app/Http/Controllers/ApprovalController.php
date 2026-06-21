@@ -80,7 +80,6 @@ class ApprovalController extends Controller
 
             DB::commit();
 
-            Cache::forget('request_stats_' . $request->user_id);
             dispatch(new ProcessApprovalWorkflow($request->id, $requestApproval->approval_level_id));
 
             return apiResponse(200, 'Request approved successfully', $request->load(['approvals']));
@@ -127,7 +126,6 @@ class ApprovalController extends Controller
 
             DB::commit();
 
-            Cache::forget('request_stats_' . $request->user_id);
             dispatch(new SendRequestRejectedNotification($request->id, $httpRequest->comments));
 
             return apiResponse(200, 'Request rejected successfully', $request->load(['approvals']));
