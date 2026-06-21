@@ -94,7 +94,6 @@ class UserController extends Controller
 
         $user->assignRole($validator['role']);
 
-        // Add audit log for role assignment
         GeneralEventTrackerJob::dispatchSync(
             auth()->user()->roles()->first()?->id,
             "Assigned role " . $validator['role'] . " to user " . $user->id,
@@ -117,7 +116,6 @@ class UserController extends Controller
 
         $user->removeRole($validator['role']);
 
-        // Add audit log for role removal
         GeneralEventTrackerJob::dispatchSync(
             auth()->user()->roles()->first()?->id,
             "Removed role " . $validator['role'] . " from user " . $user->id,
@@ -141,7 +139,6 @@ class UserController extends Controller
 
         $user->syncRoles($validator['roles']);
 
-        // Add audit log for role sync
         GeneralEventTrackerJob::dispatchSync(
             auth()->user()->roles()->first()?->id,
             "Synced roles " . implode(', ', $validator['roles']) . " for user " . $user->id,
